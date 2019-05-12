@@ -44,38 +44,46 @@ THE SOFTWARE.
 using namespace cv;
 using namespace std;
 
-void featureTracking(Mat img_1, Mat img_2, vector<Point2f>& points1, vector<Point2f>& points2, vector<uchar>& status)	{ 
+void featureTracking(Mat img_1, Mat img_2, vector<Point2f>& points1, vector<Point2f>& points2, vector<uchar>& status)
+{ 
 
 //this function automatically gets rid of points for which tracking fails
 
-  vector<float> err;					
-  Size winSize=Size(21,21);																								
-  TermCriteria termcrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01);
+	vector<float> err;					
+	Size winSize=Size(21,21);																								
+	TermCriteria termcrit=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01);
 
-  calcOpticalFlowPyrLK(img_1, img_2, points1, points2, status, err, winSize, 3, termcrit, 0, 0.001);
+	calcOpticalFlowPyrLK(img_1, img_2, points1, points2, status, err, winSize, 3, termcrit, 0, 0.001);
 
-  //getting rid of points for which the KLT tracking failed or those who have gone outside the frame
-  int indexCorrection = 0;
-  for( int i=0; i<status.size(); i++)
-     {  Point2f pt = points2.at(i- indexCorrection);
-     	if ((status.at(i) == 0)||(pt.x<0)||(pt.y<0))	{
-     		  if((pt.x<0)||(pt.y<0))	{
-     		  	status.at(i) = 0;
-     		  }
-     		  points1.erase (points1.begin() + (i - indexCorrection));
-     		  points2.erase (points2.begin() + (i - indexCorrection));
-     		  indexCorrection++;
-     	}
-
-     }
-
+	//getting rid of points for which the KLT tracking failed or those who have gone outside the frame
+	int indexCorrection = 0;
+	for (int i = 0; i < status.size(); i++)
+	{
+		Point2f pt = points2.at(i- indexCorrection);
+		if ((status.at(i) == 0)||(pt.x<0)||(pt.y<0))
+		{
+     		if((pt.x<0)||(pt.y<0)){
+	     		status.at(i) = 0;
+     		}
+     		points1.erase (points1.begin() + (i - indexCorrection));
+     		points2.erase (points2.begin() + (i - indexCorrection));
+     		indexCorrection++;
+		}
+	}
 }
 
+//uses FAST as of now, modify parameters as necessary
+void featureDetection(Mat img_1, vector<Point2f>& points1)
+{
+	vector<KeyPoint> keypoints_1;
+	int fast_threshold = 20;
+	bool nonmaxSuppression = true;
+//	FAST(img_1, keypoints_1, fast_threshold, nonmaxSuppression);
+//	KeyPoint::convert(keypoints_1, points1, vector<int>());
+	cv::goodFeaturesToTrack(img_1, points1, 300, 0.05, 5.0, noArray(), 3, true, 0.04);
 
-void featureDetection(Mat img_1, vector<Point2f>& points1)	{   //uses FAST as of now, modify parameters as necessary
-  vector<KeyPoint> keypoints_1;
-  int fast_threshold = 20;
-  bool nonmaxSuppression = true;
-  FAST(img_1, keypoints_1, fast_threshold, nonmaxSuppression);
-  KeyPoint::convert(keypoints_1, points1, vector<int>());
+	TermCriteria termcrit(TermCriteria::COUNT | TermCriteria::EPS, 20, 0.03);
+	Size subPixWinSize(3, 3);
+	cornerSubPix(img_1, points1, subPixWinSize, Size(-1, -1), termcrit);
 }
+
